@@ -4,8 +4,10 @@ import 'dart:io';
 /// TODO
 /// - Add errors showing
 /// - Add clear command
+/// - Add reset command
 /// - Improve performance
 /// - Add Windows support
+/// - Add real REPL behaivor
 
 // MARK: - Commands
 const _exitCommand = 'exit';
