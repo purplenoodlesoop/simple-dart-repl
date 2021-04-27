@@ -7,7 +7,7 @@ import 'package:simple_repl/expression_types.dart';
 /// TODO
 // [] Add errors showing
 // [] Add clear command
-// [] Fix binding name determining
+// [x] Fix binding name determining
 // [] Remove io expressions
 // [x] Add reset command
 // [x] Improve performance
@@ -28,7 +28,7 @@ const _helpMessage = '''
     reset - discard current session state
     ''';
 
-String _goodbyeMessage(Duration elapsed) => '\nUse time: $elapsed';
+String _goodbyeMessage(Duration elapsed) => 'Use time: $elapsed';
 
 Future<void> runRepl() async {
   final loginTimeStopWatch = Stopwatch()..start();
@@ -43,7 +43,7 @@ Future<void> runRepl() async {
 
 Future<void> _runRepl(List<String> lines) async {
   stdout.write('(${lines.length}) >>> ');
-  final expression = stdin.readLineSync(encoding: Encoding.getByName('utf-8'));
+  final expression = stdin.readLineSync(encoding: Encoding.getByName('utf-8')!);
 
   switch (expression) {
     case _exitCommand:
@@ -54,7 +54,7 @@ Future<void> _runRepl(List<String> lines) async {
     case _resetCommand:
       return _runRepl([]);
     default:
-      final currentLines = lines..add(expression);
+      final currentLines = lines..add(expression!);
       print(await _evaluate(currentLines));
       return _runRepl(currentLines);
   }
@@ -85,7 +85,10 @@ String _getCurrentExpressionCode(String expression) {
       port.send(null);
       ''';
     case ExpressionTypes.binding:
-      final bindingName = expression.split(' ').elementAt(1);
+      final splittedExpression =
+          expression.split(' ').where((element) => element != ' ').toList();
+      final bindingName =
+          splittedExpression.elementAt(splittedExpression.indexOf('=') - 1);
       return '''
       $expression;
       port.send($bindingName);
