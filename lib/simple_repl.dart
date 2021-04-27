@@ -1,97 +1,113 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
+
+import 'package:simple_repl/expression_types.dart';
 
 /// TODO
-/// - Add errors showing
-/// - Add clear command
-/// - Add reset command
-/// - Improve performance
-/// - Add Windows support
-/// - Add real REPL behaivor
+// [] Add errors showing
+// [] Add clear command
+// [] Fix binding name determining
+// [] Remove io expressions
+// [x] Add reset command
+// [x] Improve performance
+// [x] Add Windows support
+// [x] Add real REPL behaivor
 
 // MARK: - Commands
 const _exitCommand = 'exit';
 const _helpCommand = 'help';
+const _resetCommand = 'reset';
 
 // MARK: - Messages
-const _helpMessage =
-    'Avaliable commands:\n help – this message\n exit - exit REPL\n';
+const _helpMessage = '''
+
+    Avaliable commands:
+    help – this message
+    exit - exit REPL
+    reset - discard current session state
+    ''';
 
 String _goodbyeMessage(Duration elapsed) => '\nUse time: $elapsed';
 
 Future<void> runRepl() async {
   final loginTimeStopWatch = Stopwatch()..start();
 
-  print('Simple Dart REPL\n');
+  print('Simple Dart REPL');
   print(_helpMessage);
 
-  await _runRepl(0);
-  
+  await _runRepl([]);
+
   print(_goodbyeMessage(loginTimeStopWatch.elapsed));
 }
 
-Future<void> _runRepl(int currentLine) async {
-  stdout.write('($currentLine) >>> ');
+Future<void> _runRepl(List<String> lines) async {
+  stdout.write('(${lines.length}) >>> ');
   final expression = stdin.readLineSync(encoding: Encoding.getByName('utf-8'));
-  if (!await _processInput(expression, currentLine)) {
-    await _cleanUpExpressionDirectory(currentLine);
-    return;
-  }
-  await _runRepl(currentLine + 1);
-}
 
-Future<bool> _processInput(String input, int currentLine) async {
-  switch (input) {
+  switch (expression) {
     case _exitCommand:
-      return false;
+      return;
     case _helpCommand:
       print(_helpMessage);
-      return true;
+      return _runRepl(lines);
+    case _resetCommand:
+      return _runRepl([]);
     default:
-      print(await _evaluate(input, currentLine));
-      return true;
+      final currentLines = lines..add(expression);
+      print(await _evaluate(currentLines));
+      return _runRepl(currentLines);
   }
 }
 
-Future<String> _getCurrentDirectory() async {
-  final ls = await Process.run('pwd', []);
-  final deletingDirectoryString = ls.stdout.toString();
-  return deletingDirectoryString.substring(
-      0, deletingDirectoryString.length - 1);
+Future<dynamic> _evaluate(List<String> lines) async {
+  final port = ReceivePort();
+  await Isolate.spawnUri(_getCurrentUri(lines), [], port.sendPort);
+  return port.first;
 }
 
-Future<void> _cleanUpExpressionDirectory(int currentLine) async {
-  final currentDirectory = await _getCurrentDirectory();
-  final deletingDirectory =
-      currentDirectory + '/expression/expression_${currentLine - 1}.dart';
-  await Process.run('rm', ['-f', deletingDirectory]);
+Uri _getCurrentUri(List<String> lines) {
+  return Uri.dataFromString(_getExecutingCode(lines),
+      mimeType: 'application/dart');
 }
 
-Future<String> _evaluate(String input, int currentLine) async {
-  await _cleanUpExpressionDirectory(currentLine);
-  final expressionPath = await _writeExpressionInFile(input, currentLine);
-  final result = await _evaluateCurrentExpression(expressionPath);
-  return result;
+ExpressionTypes _determineExpressionType(String expression) {
+  if (expression.contains('print')) return ExpressionTypes.io;
+  if (expression.contains('=')) return ExpressionTypes.binding;
+  return ExpressionTypes.regular;
 }
 
-String _getFileText(String input) {
-  return 'void main(List<String> arguments){print($input);}';
-}
-
-Future<String> _writeExpressionInFile(String input, int currentLine) async {
-  final currentDirectory = await _getCurrentDirectory();
-  final expressionFilePath =
-      currentDirectory + '/expression/expression_$currentLine.dart';
-  final expressionFile = await File(expressionFilePath).create();
-  await expressionFile.writeAsString(_getFileText(input));
-  return expressionFilePath;
-}
-
-Future<String> _evaluateCurrentExpression(String expressionPath) async {
-  final evaluated = await Process.run('dart', [expressionPath]);
-  final result = evaluated.stdout.toString();
-  if (result == '') {
-    return 'Error occured';
+String _getCurrentExpressionCode(String expression) {
+  switch (_determineExpressionType(expression)) {
+    case ExpressionTypes.io:
+      return '''
+      $expression;
+      port.send(null);
+      ''';
+    case ExpressionTypes.binding:
+      final bindingName = expression.split(' ').elementAt(1);
+      return '''
+      $expression;
+      port.send($bindingName);
+      ''';
+    default:
+      return '''
+      final last = $expression;
+      port.send(last);
+      ''';
   }
-  return result.substring(0, result.length - 1);
+}
+
+String _getExecutingCode(List<String> lines) {
+  final code = lines.sublist(0, lines.length - 1).fold<String>(
+      '', (accumulator, currenLine) => '$accumulator    $currenLine;\n');
+  final currentExpressionCode = _getCurrentExpressionCode(lines.last);
+  return '''
+  import "dart:isolate";
+
+  void main(_, SendPort port) {
+    $code    
+    $currentExpressionCode
+  }
+  ''';
 }
