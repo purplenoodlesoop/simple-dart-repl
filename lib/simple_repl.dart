@@ -9,6 +9,7 @@ import 'package:simple_repl/expression_types.dart';
 // [] Add clear command
 // [x] Fix binding name determining
 // [] Remove io expressions
+// [] Add not top-level expressions
 // [x] Add reset command
 // [x] Improve performance
 // [x] Add Windows support
@@ -102,8 +103,12 @@ String _getCurrentExpressionCode(String expression) {
 }
 
 String _getExecutingCode(List<String> lines) {
-  final code = lines.sublist(0, lines.length - 1).fold<String>(
-      '', (accumulator, currenLine) => '$accumulator    $currenLine;\n');
+  final code = lines
+      .sublist(0, lines.length - 1)
+      .where((expression) =>
+          _determineExpressionType(expression) != ExpressionTypes.io)
+      .fold<String>(
+          '', (accumulator, currenLine) => '$accumulator    $currenLine;\n');
   final currentExpressionCode = _getCurrentExpressionCode(lines.last);
   return '''
   import "dart:isolate";
