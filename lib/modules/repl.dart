@@ -1,23 +1,14 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 
 import 'package:simple_repl/models/execution_result.dart';
 import 'package:simple_repl/modules/code_generation.dart';
 import 'package:simple_repl/modules/repl_text.dart';
+import 'package:simple_repl/modules/terminal.dart';
 
 // TODO
-// [x] Add propper error handling
 // [ ] Add arrows navigation
-// [x] Add clear command
-// [x] Fix binding name determining
-// [x] Remove io expressions
 // [ ] Add not top-level expressions
-// [ ] Add documentation
-// [x] Add reset command
-// [x] Improve performance
-// [x] Add Windows support
-// [x] Add real REPL behaivor
 // [ ] Add dynamic imports
 
 abstract class Repl {
@@ -34,9 +25,7 @@ abstract class Repl {
   }
 
   static Future<void> _runRepl(List<String> lines) async {
-    stdout.write('(${lines.length}) >>> ');
-    final expression =
-        stdin.readLineSync(encoding: Encoding.getByName('utf-8')!);
+    final expression = Terminal.readInput(lines.length);
 
     switch (expression) {
       case ReplText.exitCommand:
@@ -47,11 +36,7 @@ abstract class Repl {
       case ReplText.resetCommand:
         return _runRepl([]);
       case ReplText.clearCommand:
-        if (Platform.isWindows) {
-          print(Process.runSync('cls', [], runInShell: true).stdout);
-        } else {
-          print(Process.runSync('clear', [], runInShell: true).stdout);
-        }
+        Terminal.clearScreen();
         return _runRepl(lines);
       default:
         final currentLines = lines + [expression!];
