@@ -9,7 +9,7 @@ import 'package:simple_repl/modules/repl_text.dart';
 // TODO
 // [x] Add propper error handling
 // [ ] Add arrows navigation
-// [ ] Add clear command
+// [x] Add clear command
 // [x] Fix binding name determining
 // [x] Remove io expressions
 // [ ] Add not top-level expressions
@@ -18,6 +18,7 @@ import 'package:simple_repl/modules/repl_text.dart';
 // [x] Improve performance
 // [x] Add Windows support
 // [x] Add real REPL behaivor
+// [ ] Add dynamic imports
 
 abstract class Repl {
   static Future<void> runRepl() async {
@@ -36,24 +37,36 @@ abstract class Repl {
     stdout.write('(${lines.length}) >>> ');
     final expression =
         stdin.readLineSync(encoding: Encoding.getByName('utf-8')!);
+    late final List<String> nextLines;
 
     switch (expression) {
       case ReplText.exitCommand:
         return;
       case ReplText.helpCommand:
         print(ReplText.helpMessage);
-        return _runRepl(lines);
+        nextLines = lines;
+        break;
       case ReplText.resetCommand:
-        return _runRepl([]);
+        nextLines = [];
+        break;
+      case ReplText.clearCommand:
+        if (Platform.isWindows) {
+          print(Process.runSync('cls', [], runInShell: true).stdout);
+        } else {
+          print(Process.runSync('clear', [], runInShell: true).stdout);
+        }
+        nextLines = lines;
+        break;
       default:
         final currentLines = lines + [expression!];
         final evaluation = await _evaluate(currentLines);
         print(evaluation.result);
         if (evaluation.isError) {
-          return _runRepl(lines);
+          nextLines = lines;
         }
-        return _runRepl(currentLines);
+        nextLines = currentLines;
     }
+    return _runRepl(nextLines);
   }
 
   static Future<ExecutionResult> _evaluate(List<String> lines) async {

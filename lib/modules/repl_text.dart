@@ -3,6 +3,7 @@ abstract class ReplText {
   static const exitCommand = 'exit';
   static const helpCommand = 'help';
   static const resetCommand = 'reset';
+  static const clearCommand = 'clear';
 
   // MARK: - Messages
   static const helpMessage = '''
@@ -17,12 +18,10 @@ Avaliable commands:
 
   // MARK: - Functions
   static String prettifyIsolateErrorMessage(Object e) {
-  final splitted = e.toString().split('data');
-  return splitted
-      .sublist(1)
-      .map((exceptionMessage) {
-    final startingIndex = exceptionMessage.indexOf('Error');
-    return '⛔️ ' + exceptionMessage.substring(startingIndex);
-  }).reduce((value, element) => '$value\n$element');
-}
+    final splitted = e.toString().split('data');
+    return splitted.sublist(1).map((exceptionMessage) {
+      final startingIndex = exceptionMessage.indexOf('Error');
+      return '⛔️ ' + exceptionMessage.substring(startingIndex);
+    }).reduce((value, element) => '$value\n$element');
+  }
 }
