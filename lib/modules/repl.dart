@@ -37,36 +37,31 @@ abstract class Repl {
     stdout.write('(${lines.length}) >>> ');
     final expression =
         stdin.readLineSync(encoding: Encoding.getByName('utf-8')!);
-    late final List<String> nextLines;
 
     switch (expression) {
       case ReplText.exitCommand:
         return;
       case ReplText.helpCommand:
         print(ReplText.helpMessage);
-        nextLines = lines;
-        break;
+        return _runRepl(lines);
       case ReplText.resetCommand:
-        nextLines = [];
-        break;
+        return _runRepl([]);
       case ReplText.clearCommand:
         if (Platform.isWindows) {
           print(Process.runSync('cls', [], runInShell: true).stdout);
         } else {
           print(Process.runSync('clear', [], runInShell: true).stdout);
         }
-        nextLines = lines;
-        break;
+        return _runRepl(lines);
       default:
         final currentLines = lines + [expression!];
         final evaluation = await _evaluate(currentLines);
         print(evaluation.result);
         if (evaluation.isError) {
-          nextLines = lines;
+          return _runRepl(lines);
         }
-        nextLines = currentLines;
+        return _runRepl(currentLines);
     }
-    return _runRepl(nextLines);
   }
 
   static Future<ExecutionResult> _evaluate(List<String> lines) async {
