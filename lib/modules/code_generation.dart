@@ -1,4 +1,4 @@
-import 'package:simple_repl/enums/expression_types.dart';
+import '../enums/expression_types.dart';
 
 abstract class CodeGeneration {
   static ExpressionTypes _determineExpressionType(String expression) {
@@ -12,7 +12,7 @@ abstract class CodeGeneration {
       case ExpressionTypes.io:
         return '''
       $expression;
-      port.send(null);
+      port.send("null");
       ''';
       case ExpressionTypes.binding:
         final splittedExpression =
@@ -21,12 +21,12 @@ abstract class CodeGeneration {
             splittedExpression.elementAt(splittedExpression.indexOf('=') - 1);
         return '''
       $expression;
-      port.send($bindingName);
+      port.send($bindingName.toString());
       ''';
       default:
         return '''
       final result = $expression;
-      port.send(result);
+      port.send(result.toString());
       ''';
     }
   }

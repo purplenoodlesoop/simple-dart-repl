@@ -1,10 +1,11 @@
 import 'dart:io';
 import 'dart:isolate';
 
-import 'package:simple_repl/models/execution_result.dart';
-import 'package:simple_repl/modules/code_generation.dart';
-import 'package:simple_repl/modules/repl_text.dart';
-import 'package:simple_repl/modules/terminal.dart';
+import '../models/execution_result.dart';
+import 'code_generation.dart';
+import 'terminal.dart';
+
+import 'repl_text.dart';
 
 // TODO
 // [ ] Add arrows navigation
